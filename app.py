@@ -42,11 +42,11 @@ if img_file:
     # --- [이미지 최적화: 429 에러 방지 핵심] ---
     raw_image = Image.open(img_file)
     # 해상도를 600px로 줄여서 전송량을 최소화합니다.
-    raw_image.thumbnail((600, 600), Image.Resampling.LANCZOS)
-    
-    # 메모리 버퍼에 JPEG로 저장 (용량 압축)
-    buffer = io.BytesIO()
-    raw_image.convert("RGB").save(buffer, format="JPEG", quality=70)
+   # image = Image.open(img_file) 바로 아래 추가
+# 해상도를 512px로 더 줄이고, 화질을 50%로 압축하여 데이터 양을 최소화합니다.
+raw_image.thumbnail((512, 512), Image.Resampling.LANCZOS)
+buffer = io.BytesIO()
+raw_image.convert("RGB").save(buffer, format="JPEG", quality=50)
     image_for_ai = Image.open(buffer)
     # ----------------------------------------
 
@@ -66,3 +66,4 @@ if img_file:
                 except Exception as e:
                     st.error(f"오류 발생: {e}")
                     st.info("혹시 새 API 키를 넣고 'Save' 버튼을 누르셨나요?")
+
