@@ -3,26 +3,20 @@ from google import genai
 from google.genai import types
 from PIL import Image
 import json
-import time
 
 # 1. 페이지 설정
 st.set_page_config(page_title="Roomie AI", page_icon="🏠", layout="wide")
 
-# 2026년형 스타일링 (메뉴 숨기기)
+# CSS 스타일 (메뉴 숨기기)
 st.markdown("""
     <style>
-    .main { background-color: #ffffff; }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header[data-testid="stHeader"] { background-color: rgba(0,0,0,0); }
     .stButton>button {
         width: 100%; background-color: #1E1E1E; color: white;
         font-weight: 600; height: 3.5em; border-radius: 8px; border: none;
     }
-    .card {
-        background-color: #f8f9fa; padding: 24px; border-radius: 12px;
-        border: 1px solid #e9ecef; margin-bottom: 20px;
-    }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header[data-testid="stHeader"] { background-color: rgba(0,0,0,0); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -30,18 +24,14 @@ st.markdown("""
 try:
     client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
 except Exception:
-    st.error("⚠️ API 키 설정을 확인해주세요 (Streamlit Secrets).")
+    st.error("⚠️ API 키 설정을 확인해주세요.")
     st.stop()
 
 def analyze_room(image, room_size, furniture, mood):
-    # 2026년 현재 가장 안정적인 2.0 모델 사용
-    model_id = 'gemini-2.0-flash'
+    # [안정성 확보] 2.0보다 한도가 넉넉한 1.5-flash 사용
+    model_id = 'gemini-1.5-flash'
     
-    prompt = f"""
-    당신은 수석 인테리어 디자이너입니다. 
-    공간({room_size}), 가구({furniture}), 스타일({mood})을 분석하여 
-    최적의 인테리어 솔루션을 JSON 형식으로 응답하세요.
-    """
+    prompt = f"방 사진을 분석하여 인테리어 솔루션을 JSON으로 제공하세요. 면적:{room_size}, 가구:{furniture}, 스타일:{mood}"
     
     response = client.models.generate_content(
         model=model_id,
@@ -50,46 +40,40 @@ def analyze_room(image, room_size, furniture, mood):
     )
     return json.loads(response.text)
 
-# 3. UI 구성
+# 3. UI
 with st.sidebar:
     st.header("Design Your Space")
-    img_file = st.file_uploader("방 사진 업로드", type=["png", "jpg", "jpeg", "webp"])
-    room_size = st.text_input("방 크기", placeholder="예: 6평, 20m²")
-    furniture = st.text_area("필요 가구", placeholder="예: 침대, 책상")
-    mood = st.text_input("원하는 스타일", placeholder="예: 모던, 우드톤")
+    img_file = st.file_uploader("방 사진 업로드 (3MB 이상도 OK)", type=["png", "jpg", "jpeg"])
+    room_size = st.text_input("방 크기")
+    furniture = st.text_area("필요 가구")
+    mood = st.text_input("원하는 스타일")
     btn = st.button("✨ 분석 시작")
 
 st.title("Roomie AI")
-st.markdown("---")
 
 if img_file:
-    col1, col2 = st.columns([1, 1.2])
     image = Image.open(img_file)
     
-    # --- [용량 최적화 로직 추가] ---
-    # 3.5MB 사진을 약 100~300KB 수준으로 압축합니다.
-    max_size = (1024, 1024) # 가로세로 최대 1024px로 제한
-    image.thumbnail(max_size, Image.Resampling.LANCZOS)
-    # ----------------------------
+    # --- [이미지 최적화: 429 에러 방지 핵심] ---
+    # 사진이 잘리지 않게 비율을 유지하며 용량만 줄입니다.
+    # [Image of digital image resizing process]
+    image.thumbnail((800, 800), Image.Resampling.LANCZOS)
+    # ----------------------------------------
 
+    col1, col2 = st.columns([1, 1.2])
     with col1:
+        # [2026년 규격] width='stretch' 사용 (로그 경고 해결)
         st.image(image, width='stretch', caption="최적화된 이미지")
 
     if btn:
         with col2:
-            # 429 에러 방지를 위한 아주 짧은 대기 (0.5초)
-            time.sleep(0.5)
-            with st.spinner("AI가 분석 중입니다..."):
+            with st.spinner("AI가 분석 중... (한도 최적화 모드)"):
                 try:
                     result = analyze_room(image, room_size, furniture, mood)
                     st.success("분석 완료!")
-                    st.json(result)
+                    st.write(result)
                 except Exception as e:
-                    # 429 에러(한도 초과) 발생 시 안내 문구
                     if "429" in str(e):
-                        st.error("⚠️ 무료 버전 사용량이 일시적으로 초과되었습니다. 1분만 기다렸다가 다시 눌러주세요!")
+                        st.error("⚠️ 구글 서버가 바쁩니다. 1분만 쉬었다가 다시 눌러주세요!")
                     else:
-                        st.error(f"분석 중 오류 발생: {e}")
-else:
-    st.info("👈 왼쪽에서 사진을 업로드해주세요.")
-
+                        st.error(f"오류 발생: {e}")
