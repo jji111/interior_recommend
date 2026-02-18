@@ -8,26 +8,39 @@ import json
 st.set_page_config(page_title="Roomie AI", page_icon="🏠", layout="wide")
 
 # CSS 스타일 (메뉴 숨기기 포함)
+# app.py 상단의 스타일 부분을 아래 내용으로 덮어씌우세요
 st.markdown("""
     <style>
+    /* 메인 배경색 */
     .main { background-color: #ffffff; }
+    
+    /* 버튼 스타일 */
     .stButton>button {
         width: 100%; background-color: #1E1E1E; color: white;
         font-weight: 600; height: 3.5em; border-radius: 8px; border: none;
     }
+
+    /* 카드 박스 스타일 */
     .card {
         background-color: #f8f9fa; padding: 24px; border-radius: 12px;
         border: 1px solid #e9ecef; margin-bottom: 20px;
     }
+
+    /* 컬러 박스 스타일 */
     .color-box {
         width: 100%; height: 80px; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
         color: white; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         margin-bottom: 8px;
     }
+
+    /* [수정됨] 헤더 전체가 아닌, 메뉴와 데플로이 버튼만 쏙 숨기기 */
+    /* 오른쪽 위 점 3개 메뉴 숨기기 */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
+    /* 하단 "Made with Streamlit" 숨기기 */
     footer {visibility: hidden;}
+    /* 상단 Deploy 버튼만 숨기고 사이드바 버튼은 남기기 */
+    div[data-testid="stStatusWidget"] {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -99,3 +112,4 @@ if img_file:
                     st.error(f"상세 에러 발생: {e}")
 else:
     st.info("👈 왼쪽에서 사진을 업로드해주세요.")
+
