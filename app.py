@@ -1,34 +1,23 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
 import json
 
 # 1. 페이지 설정
-st.set_page_config(
-    page_title="Roomie AI",
-    page_icon="🏠",
-    layout="wide"
-)
+st.set_page_config(page_title="Roomie AI", page_icon="🏠", layout="wide")
 
-# CSS 스타일 (메뉴바 숨기기 포함)
+# CSS 스타일 (메뉴 숨기기 포함)
 st.markdown("""
     <style>
     .main { background-color: #ffffff; }
     .stButton>button {
-        width: 100%;
-        background-color: #1E1E1E; 
-        color: white;
-        font-weight: 600;
-        height: 3.5em;
-        border-radius: 8px;
-        border: none;
+        width: 100%; background-color: #1E1E1E; color: white;
+        font-weight: 600; height: 3.5em; border-radius: 8px; border: none;
     }
     .card {
-        background-color: #f8f9fa;
-        padding: 24px;
-        border-radius: 12px;
-        border: 1px solid #e9ecef;
-        margin-bottom: 20px;
+        background-color: #f8f9fa; padding: 24px; border-radius: 12px;
+        border: 1px solid #e9ecef; margin-bottom: 20px;
     }
     .color-box {
         width: 100%; height: 80px; border-radius: 8px;
@@ -42,18 +31,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. API 키 연결
+# 2. 최신 Gemini 클라이언트 설정
 try:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
+    # 2026년형 google-genai 방식
+    client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
 except Exception:
-    st.error("⚠️ API 키 설정을 확인해주세요 (Streamlit Secrets).")
+    st.error("⚠️ API 키 설정을 확인해주세요.")
     st.stop()
 
 def analyze_room(image, room_size, furniture, mood):
-    # 가장 표준적인 모델 명칭으로 복귀
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
     prompt = f"""
     당신은 수석 인테리어 디자이너입니다. 
     제공된 방 사진과 요청사항을 분석하여 감각적인 인테리어 솔루션을 제안해주세요.
@@ -66,13 +52,17 @@ def analyze_room(image, room_size, furniture, mood):
     }}
     """
     
-    response = model.generate_content(
-        [image, prompt],
-        generation_config={"response_mime_type": "application/json"}
+    # 최신 SDK 호출 방식
+    response = client.models.generate_content(
+        model='gemini-1.5-flash',
+        contents=[image, prompt],
+        config=types.GenerateContentConfig(
+            response_mime_type='application/json'
+        )
     )
     return json.loads(response.text)
 
-# 3. 사이드바 및 메인 화면
+# 3. UI 구성
 with st.sidebar:
     st.header("Design Your Space")
     img_file = st.file_uploader("공간 사진 업로드", type=["png", "jpg", "jpeg", "webp"])
@@ -92,7 +82,7 @@ if img_file:
 
     if btn:
         with col2:
-            with st.spinner("AI가 분석 중입니다..."):
+            with st.spinner("AI가 최신 엔진으로 분석 중입니다..."):
                 try:
                     result = analyze_room(image, room_size, furniture, mood)
                     st.success("분석 완료!")
