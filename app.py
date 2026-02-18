@@ -51,8 +51,8 @@ except Exception:
     st.stop()
 
 def analyze_room(image, room_size, furniture, mood):
-    # 모델 이름 수정: gemini-1.5-flash-latest
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    # 가장 표준적인 모델 명칭으로 복귀
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     prompt = f"""
     당신은 수석 인테리어 디자이너입니다. 
