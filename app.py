@@ -65,9 +65,15 @@ st.markdown("---")
 if img_file:
     col1, col2 = st.columns([1, 1.2])
     image = Image.open(img_file)
+    
+    # --- [용량 최적화 로직 추가] ---
+    # 3.5MB 사진을 약 100~300KB 수준으로 압축합니다.
+    max_size = (1024, 1024) # 가로세로 최대 1024px로 제한
+    image.thumbnail(max_size, Image.Resampling.LANCZOS)
+    # ----------------------------
+
     with col1:
-        # [2026년 업데이트] use_container_width 대신 width='stretch' 사용
-        st.image(image, width='stretch', caption="현재 공간")
+        st.image(image, width='stretch', caption="최적화된 이미지")
 
     if btn:
         with col2:
@@ -86,3 +92,4 @@ if img_file:
                         st.error(f"분석 중 오류 발생: {e}")
 else:
     st.info("👈 왼쪽에서 사진을 업로드해주세요.")
+
