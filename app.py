@@ -4,26 +4,24 @@ from google.genai import types
 from PIL import Image
 import json
 import io
-import time
 
 # 1. 페이지 설정
 st.set_page_config(page_title="Roomie AI", page_icon="🏠", layout="wide")
 
-# 2. 클라이언트 설정
+# 2. 클라이언트 설정 (새로 발급받은 API 키 사용)
 try:
+    # 2026년형 google-genai 방식
     client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
 except Exception:
-    st.error("⚠️ API 키 설정을 확인해주세요.")
+    st.error("⚠️ Streamlit Secrets에서 API 키가 올바른지 확인해주세요.")
     st.stop()
 
-def analyze_room(image_bytes, room_size, furniture, mood):
-    # [안정성 최우선] 429 에러가 가장 적은 8b(가벼운) 모델 사용
-    model_id = 'gemini-1.5-flash-8b'
+def analyze_room(image_input, room_size, furniture, mood):
+    # 404 에러가 나지 않는 확실한 모델 이름
+    model_id = 'gemini-2.0-flash'
     
-    image_input = Image.open(io.BytesIO(image_bytes))
-    prompt = f"인테리어 분석 JSON: {room_size}, {furniture}, {mood}"
+    prompt = f"인테리어 전문가로서 분석해주세요. JSON 형식으로 응답하세요. 면적:{room_size}, 가구:{furniture}, 스타일:{mood}"
     
-    # 404 방지를 위해 모델 리스트를 명시적으로 호출하는 방식
     response = client.models.generate_content(
         model=model_id,
         contents=[image_input, prompt],
@@ -41,27 +39,30 @@ with st.sidebar:
     btn = st.button("✨ 분석 시작")
 
 if img_file:
-    # --- [초압축: 429 에러 원천 차단] ---
+    # --- [이미지 최적화: 429 에러 방지 핵심] ---
     raw_image = Image.open(img_file)
-    raw_image.thumbnail((512, 512), Image.Resampling.LANCZOS) # 더 작게 줄임
+    # 해상도를 600px로 줄여서 전송량을 최소화합니다.
+    raw_image.thumbnail((600, 600), Image.Resampling.LANCZOS)
     
+    # 메모리 버퍼에 JPEG로 저장 (용량 압축)
     buffer = io.BytesIO()
-    raw_image.convert("RGB").save(buffer, format="JPEG", quality=50) # 화질 50%
-    compressed_bytes = buffer.getvalue()
-    # -------------------------------
+    raw_image.convert("RGB").save(buffer, format="JPEG", quality=70)
+    image_for_ai = Image.open(buffer)
+    # ----------------------------------------
 
     col1, col2 = st.columns([1, 1.2])
     with col1:
-        st.image(raw_image, width='stretch', caption=f"압축 완료 ({len(compressed_bytes)/1024:.1f}KB)")
+        # [2026년형 규격] width='stretch' 사용 (로그 경고 해결)
+        st.image(raw_image, width='stretch', caption="최적화 완료")
 
     if btn:
         with col2:
-            with st.spinner("가장 가벼운 모델로 분석 중..."):
+            with st.spinner("새로운 프로젝트 할당량으로 분석 중..."):
                 try:
-                    # 429 방지를 위해 3초 대기
-                    time.sleep(3)
-                    result = analyze_room(compressed_bytes, room_size, furniture, mood)
-                    st.success("드디어 분석 성공!")
+                    # 압축된 이미지를 전송
+                    result = analyze_room(image_for_ai, room_size, furniture, mood)
+                    st.success("분석 성공!")
                     st.write(result)
                 except Exception as e:
-                    st.error(f"⚠️ 현재 구글 API 한도 초과 상태입니다.\n\n해결법: 1. 새 API 키 발급 2. 내일 다시 시도\n\n(상세: {e})")
+                    st.error(f"오류 발생: {e}")
+                    st.info("혹시 새 API 키를 넣고 'Save' 버튼을 누르셨나요?")
