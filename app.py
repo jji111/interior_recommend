@@ -53,6 +53,10 @@ except Exception:
     st.stop()
 
 def analyze_room(image, room_size, furniture, mood):
+    # 2026년 표준 모델인 gemini-2.0-flash로 교체
+    # 'models/' 접두사 없이 모델 이름만 정확히 입력합니다.
+    model_id = 'gemini-2.0-flash' 
+    
     prompt = f"""
     당신은 수석 인테리어 디자이너입니다. 
     제공된 방 사진과 요청사항을 분석하여 감각적인 인테리어 솔루션을 제안해주세요.
@@ -65,15 +69,19 @@ def analyze_room(image, room_size, furniture, mood):
     }}
     """
     
-    # 최신 SDK 호출 방식
-    response = client.models.generate_content(
-        model='gemini-1.5-flash',
-        contents=[image, prompt],
-        config=types.GenerateContentConfig(
-            response_mime_type='application/json'
+    try:
+        response = client.models.generate_content(
+            model=model_id,
+            contents=[image, prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type='application/json'
+            )
         )
-    )
-    return json.loads(response.text)
+        return json.loads(response.text)
+    except Exception as e:
+        # 에러 발생 시 로그에 상세 내용을 남기도록 보완
+        st.error(f"모델 호출 실패 ({model_id}): {e}")
+        raise e
 
 # 3. UI 구성
 with st.sidebar:
@@ -112,4 +120,5 @@ if img_file:
                     st.error(f"상세 에러 발생: {e}")
 else:
     st.info("👈 왼쪽에서 사진을 업로드해주세요.")
+
 
